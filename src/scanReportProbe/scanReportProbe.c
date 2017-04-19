@@ -21,109 +21,64 @@ char SA[24];
 char DA[24];
 char AP_MAC[24];
 
+#define SNAP_LEN 1518       // 以太网帧最大长度
+#define SIZE_ETHERNET 14   // 以太网包头长度 mac 6*2, type: 2
+#define ETHER_ADDR_LEN  6  // mac地址长度
 
+//以太网卡头信息 MAC 和type 共计14
+struct packet_ethernet {
+    u_char  ether_dhost[ETHER_ADDR_LEN];    /* destination host address */
+    u_char  ether_shost[ETHER_ADDR_LEN];    /* source host address */
+    u_short ether_type;                     /* IP? ARP? RARP? etc */
+};
 
-int print_radiotap_header_old(const u_char *Buffer, int Size){
-	// This struct is the RadioTap header: https://radiotap.org
-	struct radiotap_header{ // RadioTap is the standard for 802.11 reception/transmission/injection
-		uint8_t it_rev; // Revision: Version of RadioTap
-		uint8_t it_pad; // Padding: 0 - Aligns the fields onto natural word boundaries
-		uint16_t it_len;// Length: 26 - entire length of RadioTap header
-	};
-	// These are placeholders for offset values:
-	const u_char *bssid; // a place to put our BSSID \ these are bytes
-	const u_char *essid; // a place to put our ESSID / from the packet
-	const u_char *essidLen;
-	const u_char *channel; // the frequency (in Mhz) of the AP Radio
-	const u_char *rssi; // received signal strength
-	/*
-	 * Determining the Security protocol: Auth Key Mgmt: 00-0f-ac-01 == EAP, 00-0f-ac-02 == PSK
-	 * Pairwise Cipher Suite, PCS
-	 * Auth Key MGMT, AKM
-	 *
-	 * These are "tagged params" and need to be parsed programmatically
-	 *
-	 * WPA2/PSK/CCMP = (AKM:00-0f-ac-02,PCS:00-0f-ac-04) tag-type:0x30
-	 * WEP 40 = PCS:00-0f-ac-01
-	 * WEP 104 = PCS:00-0f-ac-05
-	 * TKIP = PCS:00-0f-ac-02
-	 * Microsoft Suite TKIP = PCS:00-50-f2-02, tag-type: 0xdd
-	 * WPA2 Enterprise = (AKM:00-0f-ac-04,PCS:00-0f-ac-04) tag-type: 0x30
-	 *
-	 */
-	int offset = 0;
-	struct radiotap_header *rtaphdr;
-	rtaphdr = (struct radiotap_header *) Buffer;
-	offset = rtaphdr->it_len; // 26 bytes on my machine
-	bssid = Buffer + 42; // store the BSSID/AP MAC addr, 36 byte offset is transmitter address
-	rssi = Buffer + 22; // this is hex and this value is subtracted from 256 to get -X dbm.
-	signed int rssiDbm = rssi[0] - 256;
-	channel = Buffer + 18; // channel in little endian format (2 bytes)
-	int channelFreq = channel[1] * 256 + channel[0]; // a little bit of math, remember little endian
-	// 87 byte offset contains the "channel number" as per 802.11, e.g. 2412 = "channel 11"
-	
-	fprintf(stdout,"RSSI: %d dBm\n",rssiDbm);
-	fprintf(stdout,"AP Frequency: %iMhz\n",channelFreq);
-	fprintf(stdout,"BSSID string: %02X:%02X:%02X:%02X:%02X:%02X\n",bssid[0],bssid[1],bssid[2],bssid[3],bssid[4],bssid[5]);
+/* IP header */
+struct packet_ip {
+    u_char  ip_vhl;                 /* version << 4 | header length >> 2 */
+    u_char  ip_tos;                 /* type of service */
+    u_short ip_len;                 /* total length */
+    u_short ip_id;                  /* identification */
+    u_short ip_off;                 /* fragment offset field */
+    #define IP_RF 0x8000            /* reserved fragment flag */
+    #define IP_DF 0x4000            /* dont fragment flag */
+    #define IP_MF 0x2000            /* more fragments flag */
+    #define IP_OFFMASK 0x1fff       /* mask for fragmenting bits */
+    u_char  ip_ttl;                 /* time to live */
+    u_char  ip_p;                   /* protocol */
+    u_short ip_sum;                 /* checksum */
+    struct  in_addr ip_src,ip_dst;  /* source and dest address */
+    //struct in_addr ip_src;
+    //struct in_addr ip_dst;              /* source and dest address */
+};
 
-	return offset;
-}
+#define IP_HL(ip)               (((ip)->ip_vhl) & 0x0f)
+#define IP_V(ip)                (((ip)->ip_vhl) >> 4)
+ 
+/* TCP header */
+typedef u_int tcp_seq;
 
+struct packet_tcp {
+    u_short th_sport;               /* source port */
+    u_short th_dport;               /* destination port */
+    tcp_seq th_seq;                 /* sequence number */
+    tcp_seq th_ack;                 /* acknowledgement number */
+    u_char  th_offx2;               /* data offset, rsvd */
+    #define TH_OFF(th)      (((th)->th_offx2 & 0xf0) >> 4)
+    u_char  th_flags;
+    #define TH_FIN  0x01
+    #define TH_SYN  0x02
+    #define TH_RST  0x04
+    #define TH_PUSH 0x08
+    #define TH_ACK  0x10
+    #define TH_URG  0x20
+    #define TH_ECE  0x40
+    #define TH_CWR  0x80
+    #define TH_FLAGS        (TH_FIN|TH_SYN|TH_RST|TH_ACK|TH_URG|TH_ECE|TH_CWR)
+    u_short th_win;                 /* window */
+    u_short th_sum;                 /* checksum */
+    u_short th_urp;                 /* urgent pointer */
+};
 
-int print_radiotap_header(const u_char *Buffer, int Size){
-	struct ieee80211_radiotap_iterator iter;
-	void *data = (void*)Buffer;
-	int err;
-	int offset;
-	
-	err = ieee80211_radiotap_iterator_init(&iter, data, Size, NULL);
-	if (err) {
-		printf("malformed radiotap header (init returns %d)\n", err);
-		return -3;
-	}
-	offset = iter._max_length;
-	while (!(err = ieee80211_radiotap_iterator_next(&iter))) {
-		if (iter.this_arg_index == IEEE80211_RADIOTAP_DBM_ANTSIGNAL) {
-			//printf("RSSI = %i", (int)iter.this_arg[0] - 256);
-            RSSI=(int)iter.this_arg[0] - 256;
-            //printf("RSSI=%i\n",RSSI);
-			//printf("\n");
-		}
-        if (iter.this_arg_index == IEEE80211_RADIOTAP_CHANNEL) {
-            //printf("CH = %i", (int)iter.this_arg[1]*256+iter.this_arg[0]);
-
-            CH=le16toh(*(uint16_t*)iter.this_arg);
-            //printf("CH %i",CH);
-            //printf("\n");
-        }
-	}
-
-	if (err != -ENOENT) {
-		printf("malformed radiotap data\n");
-		return -3;
-	}
-
-	return offset;
-}
-
-void print_ethernet_header(const u_char *Buffer, int Size){
-	const u_char *source_mac_addr;
-	const u_char *destination_mac_addr;
-	destination_mac_addr = Buffer + 4;
-	source_mac_addr = Buffer + 10;
-	//fprintf(stdout,"Source MAC address: %02X:%02X:%02X:%02X:%02X:%02X\n",source_mac_addr[0],source_mac_addr[1],source_mac_addr[2],source_mac_addr[3],source_mac_addr[4],source_mac_addr[5]);
-	//fprintf(stdout,"Destination MAC address: %02X:%02X:%02X:%02X:%02X:%02X\n",destination_mac_addr[0],destination_mac_addr[1],destination_mac_addr[2],destination_mac_addr[3],destination_mac_addr[4],destination_mac_addr[5]);
-    //SA=source_mac_addr[0],source_mac_addr[1],source_mac_addr[2],source_mac_addr[3],source_mac_addr[4],source_mac_addr[5];
-    for(int i = 0; i < 6; ++i)
-    {
-        sprintf(SA + 2*i, "%02X", source_mac_addr[i]);
-        sprintf(DA + 2*i, "%02X", destination_mac_addr[i]);
-
-    }
-    //printf("SA  =%s\n",SA);
-    //printf("SA  =%s",DA);
-
-}
 int cjson_struts_init(){
     cJSON * pJsonRoot = NULL;
 
@@ -153,45 +108,63 @@ int cjson_struts_init(){
     printf("%s\n", p);
     return 0;
 }
-void my_callback(u_char *args, const struct pcap_pkthdr* header, const u_char* packet)
-{
-	int offset;
-	int size = header->len;
-	offset = print_radiotap_header(packet, size);
-	if(offset > 0)
-		print_ethernet_header(packet + offset, size);
-	global++;
-	fprintf(stdout,"/*-----------------------------------Pkt #%i-----------------------------------*/\n", global);
-	fflush(stdout);
-    cjson_struts_init();
 
-
+void loop_callback(u_char *args, const struct pcap_pkthdr *header, const u_char *packet) {
+    static int count = 0;                   // 包计数器
+    const struct packet_ethernet *ethernet;  /* The ethernet header [1] */
+    const struct packet_ip *ip;              /* The IP header */
+    const struct packet_tcp *tcp;            /* The TCP header */
+    const char *payload;                     /* Packet payload */
+ 
+    int size_ip;
+    int size_tcp;
+    int size_payload;
+ 
+    count++;
+ 
+    /* 以太网头 */
+    ethernet = (struct packet_ethernet*)(packet);
+ 
+    /* IP头 */
+    ip = (struct packet_ip*)(packet + SIZE_ETHERNET);
+    size_ip = IP_HL(ip)*4;
+    if (size_ip < 20) {
+        //printf("无效的IP头长度: %u bytes\n", size_ip);
+        return;
+    }
+ 
+    if ( ip->ip_p != IPPROTO_TCP ){ // TCP,UDP,ICMP,IP
+    return;
+    }
+ 
+    /* TCP头 */
+    tcp = (struct packet_tcp*)(packet + SIZE_ETHERNET + size_ip);
+    size_tcp = TH_OFF(tcp)*4;
+    if (size_tcp < 20) {
+        //printf("无效的TCP头长度: %u bytes\n", size_tcp);
+        return;
+    }
+ 
+    int sport =  ntohs(tcp->th_sport);
+    int dport =  ntohs(tcp->th_dport);
+    printf("%s:%d ", inet_ntoa(ip->ip_src), sport);
+    printf("%s:%d \n", inet_ntoa(ip->ip_dst), dport);
+ 
+    //内容
+    payload = (u_char *)(packet + SIZE_ETHERNET + size_ip + size_tcp);
+ 
+    //内容长度 
+    size_payload = ntohs(ip->ip_len) - (size_ip + size_tcp);
+ 
+    if (size_payload > 0) {
+    	//printf("%d %d %d bytes\n", ntohs(tcp->th_seq), ntohs(tcp->th_ack) );
+    	write(payload, size_payload);
+    } else {
+   	  //printf("%d %d %d \n", ntohs(tcp->th_seq), ntohs(tcp->th_ack));
+    }
 }
-int get_local_mac(char *eth)
- {
-     int sock;
-     int res;
-     struct ifreq ifr;
 
-     sock = socket(AF_INET, SOCK_STREAM, 0);
-     strcpy(ifr.ifr_name,eth);
-     res = ioctl(sock, SIOCGIFADDR, &ifr);
 
-     //printf("IP: %s\n",inet_ntoa(((struct sockaddr_in*)&ifr.ifr_addr)->sin_addr));
-
-     //strcpy(ifr.ifr_name, "ens331asdfas");
-     res = ioctl(sock, SIOCGIFHWADDR, &ifr);
-
-     int i;
-     //char mac[32];
-     for(i = 0; i < 6; ++i)
-     {
-         sprintf(AP_MAC + 2*i, "%02x", (unsigned char)ifr.ifr_hwaddr.sa_data[i]);
-     }
-     //printf("MAC: %s\n",mac);
-
-     return 0;
- }
 
 
 int main(int argc,char **argv)
@@ -199,7 +172,6 @@ int main(int argc,char **argv)
 
 	init_get_config_parameters(); /*init config file read*/
 
-	get_local_mac(loc_Adapter);		/*local adapter card true mac*/
 
 	printf("Start\n");
 	char *dev;
@@ -231,12 +203,7 @@ int main(int argc,char **argv)
 		printf("pcap_open_live(): %s\n", errbuf);
 		exit(1);
 	}
-	/* Check if the network interface provides the radiotap header */
-	if (pcap_datalink(descr) != DLT_IEEE802_11_RADIO) {
-		fprintf(stderr, "Device %s doesn't provide 802.11 radiotap header - not supported\n", dev);
-		return(2);
-	}
-    
+
 	/* Compile and apply the filter */
 	if (pcap_compile(descr, &fp, filter_exp, 0, netp) == -1) {
 		fprintf(stderr, "Couldn't parse filter %s: %s\n", filter_exp, pcap_geterr(descr));
@@ -248,7 +215,8 @@ int main(int argc,char **argv)
 	}
 	//close config file
 	config_destroy_init();
+	printf("config destroy");
 	/* loop for callback function */
-	pcap_loop(descr, -1, my_callback, NULL);
+	pcap_loop(descr, -1, loop_callback, NULL);
 	return 0;
 }

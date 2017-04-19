@@ -44,6 +44,7 @@ int init_get_config_parameters(){
         (config_lookup_string(&setting, "interface", &INTERFACE_TMP));
         (config_lookup_string(&setting, "loc_Adapter", &loc_Adapter));
         //printf("pkg_type : %s\n\n", INTERFACE_TMP);
+	printf("%s -------testtest\n");
         //config_destroy(&cfg);
         return (EXIT_SUCCESS);
     }
