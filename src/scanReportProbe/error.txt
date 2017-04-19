@@ -1,6 +1,0 @@
-cc -O2 -s -lm -c scanReportProbe.c
-cc -O2 -s -lm -c radiotap.c
-cc -O2 -s -lm -c consumer.c
-cc -O2 -s -lm -c cjson.c
-cc -O2 -s -lm -c handler_config.c
-cc -o scanReportProbe scanReportProbe.o radiotap.o consumer.o cjson.o handler_config.o -O2 -s -lm -lpcap -pthread -lconfig
