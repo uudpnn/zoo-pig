@@ -10,7 +10,7 @@
 #include <netinet/if_ether.h>
 #include <net/if.h>
 #include <sys/ioctl.h>
-#include <curl/curl.h>
+//#include <curl/curl.h>
 #include "radiotap_iter.h"
 #include "handler_config.h"  //read /etc/my_app_name/config_name.conf
 #include "cJSON.h"
