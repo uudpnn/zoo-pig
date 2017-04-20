@@ -14,12 +14,6 @@
 #include "radiotap_iter.h"
 #include "handler_config.h"  //read /etc/my_app_name/config_name.conf
 #include "cJSON.h"
-int global = 0;
-int CH;
-int RSSI;
-char SA[24];
-char DA[24];
-char AP_MAC[24];
 
 #define SNAP_LEN 1518       // 以太网帧最大长度
 #define SIZE_ETHERNET 14   // 以太网包头长度 mac 6*2, type: 2
@@ -78,7 +72,7 @@ struct packet_tcp {
     u_short th_sum;                 /* checksum */
     u_short th_urp;                 /* urgent pointer */
 };
-
+/**
 int cjson_struts_init(){
     cJSON * pJsonRoot = NULL;
 
@@ -90,7 +84,7 @@ int cjson_struts_init(){
         return 2;
     }
     //json struct for cjson
-    cJSON_AddStringToObject(pJsonRoot, "AP_MAC", AP_MAC);
+   / cJSON_AddStringToObject(pJsonRoot, "AP_MAC", AP_MAC);
     cJSON_AddStringToObject(pJsonRoot, "DA_MAC", SA);
     cJSON_AddStringToObject(pJsonRoot, "BSSID_MAC", DA);
     cJSON_AddNumberToObject(pJsonRoot, "Db", RSSI);
@@ -108,7 +102,7 @@ int cjson_struts_init(){
     printf("%s\n", p);
     return 0;
 }
-
+*/
 void loop_callback(u_char *args, const struct pcap_pkthdr *header, const u_char *packet) {
     static int count = 0;                   // 包计数器
     const struct packet_ethernet *ethernet;  /* The ethernet header [1] */
@@ -169,7 +163,7 @@ void loop_callback(u_char *args, const struct pcap_pkthdr *header, const u_char 
 
 int main(int argc,char **argv)
 {
-
+  printf("laiba bliasdasdiisi--------");
 	init_get_config_parameters(); /*init config file read*/
 
 
@@ -220,3 +214,4 @@ int main(int argc,char **argv)
 	pcap_loop(descr, -1, loop_callback, NULL);
 	return 0;
 }
+

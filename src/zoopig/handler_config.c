@@ -20,11 +20,9 @@ config_t cfg;
 
 
 int init_get_config_parameters(){
-
-    //config_t cfg;
+    config_t cfg;
     config_setting_t *setting;
     config_init(&cfg); //initializes the config_t structure pointed by config as a new,empty configuration
-
     // Read and parse the file scanReportProbe.conf into the configuration object cfg. If there is an error, report it and exit.
     //It returns an int : CONFIG_TRUE on success, or CONFIG_FALSE on failure; the config_error_text() and config_error_line() functions, can be used to obtain information about the error.
     if(! config_read_file(&cfg, CONFIGFILE))
@@ -34,7 +32,8 @@ int init_get_config_parameters(){
         fprintf(stderr,"----------------------------------------------------\n");
         config_destroy(&cfg);
         return(EXIT_FAILURE);
-    }
+    
+		}
     setting= config_lookup(&cfg,"base_conf");
     if (setting == NULL) {
         fprintf(stderr, "No 'base_conf' setting in configuration file scanReportProbe.conf.\n");
@@ -44,7 +43,6 @@ int init_get_config_parameters(){
         (config_lookup_string(&setting, "interface", &INTERFACE_TMP));
         (config_lookup_string(&setting, "loc_Adapter", &loc_Adapter));
         //printf("pkg_type : %s\n\n", INTERFACE_TMP);
-	printf("%s -------testtest\n");
         //config_destroy(&cfg);
         return (EXIT_SUCCESS);
     }
