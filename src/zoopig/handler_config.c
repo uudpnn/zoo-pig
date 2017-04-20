@@ -35,8 +35,11 @@ int init_get_config_parameters(){
         config_destroy(&cfg);
         return(EXIT_FAILURE);
     }
+		printf("1111111111111111");
     setting= config_lookup(&cfg,"base_conf");
-    if (setting == NULL) {
+   
+		printf("1111111111111111");
+	 	if (setting == NULL) {
         fprintf(stderr, "No 'base_conf' setting in configuration file scanReportProbe.conf.\n");
         //config_destroy(&cfg);
         return (EXIT_FAILURE);
@@ -44,7 +47,7 @@ int init_get_config_parameters(){
         (config_lookup_string(&setting, "interface", &INTERFACE_TMP));
         (config_lookup_string(&setting, "loc_Adapter", &loc_Adapter));
         //printf("pkg_type : %s\n\n", INTERFACE_TMP);
-	printf("%s -------testtest\n");
+				printf("%s -------testtest\n");
         //config_destroy(&cfg);
         return (EXIT_SUCCESS);
     }

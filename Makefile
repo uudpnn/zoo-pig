@@ -27,7 +27,7 @@ define Package/zoopig
     URL:=https://github.com/luigiDB/scan-report_probe
     TITLE:=Scan in monitor mode probe over wifi channel with periodic report to a server through http post.
     MAINTAINER:=Please refer to github repository page
-    DEPENDS:= +libpthread +libpcap +lconfig
+    DEPENDS:= +libpthread +libpcap
 endef
 
 define Package/zoopig/description
