@@ -4,7 +4,7 @@ include $(TOPDIR)/rules.mk
 # version number of the sources you're using
 # how many times you've released a package based on the above version number
 PKG_NAME:=zoopig
-PKG_VERSION:=1.0
+PKG_VERSION:=1.0.1
 PKG_RELEASE:=1
 PKG_LICENSE:=MIT
 
@@ -27,11 +27,7 @@ define Package/zoopig
     URL:=https://github.com/luigiDB/scan-report_probe
     TITLE:=Scan in monitor mode probe over wifi channel with periodic report to a server through http post.
     MAINTAINER:=Please refer to github repository page
-<<<<<<< HEAD
     DEPENDS:= +libpthread +libpcap +libconfig +libcurl
-=======
-    DEPENDS:= +libpthread +libpcap
->>>>>>> 26d4ca937f92bce8fcd450b95b33bf83153f91b8
 endef
 
 define Package/zoopig/description
