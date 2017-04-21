@@ -12,7 +12,6 @@
 
 #include <sys/ioctl.h>
 #include <curl/curl.h>
-#include "radiotap_iter.h"
 #include "handler_config.h"  //read /etc/my_app_name/config_name.conf
 #include "cJSON.h"
 
@@ -146,22 +145,16 @@ void loop_callback(u_char *args, const struct pcap_pkthdr *header, const u_char 
         //printf("无效的TCP头长度: %u bytes\n", size_tcp);
         return;
     }
-	char *postfile= (char *)malloc(80);
+	char *postfile= (char *)malloc(100);
 
 	char sport[2];
 	char dport[2];
 	char *splitstr=",";
-    //int sport =  ntohs(tcp->th_sport);
-    //int dport =  ntohs(tcp->th_dport);
 	sprintf(sport,"%d",ntohs(tcp->th_sport));
 	sprintf(dport,"%d",ntohs(tcp->th_dport));
 	char *ip_src=inet_ntoa(ip->ip_src);
 	char *ip_dst=inet_ntoa(ip->ip_dst);
-    //printf("%s:%s %s", inet_ntoa(ip->ip_src), sport_itoa,SA);
-	//printf("%s:%s %s\n", inet_ntoa(ip->ip_dst), dport_itoa,DA);
 
-	char dest[30] = "Hello";
-    char src[] = "World";
 
     postfile=strcat(strcat(strcat(strcat(strcat(postfile, ip_src),splitstr),sport),splitstr),SA);
 	strcat(strcat(strcat(strcat(strcat(strcat(postfile,splitstr),ip_dst),splitstr),dport),splitstr),DA);
@@ -227,7 +220,7 @@ int main(int argc,char **argv)
 
 	printf("Start\n");
 	posturl = URL;
-	printf("%s-----",posturl);
+	printf("Server URL: %s",posturl);
 	char *dev;
 	char errbuf[PCAP_ERRBUF_SIZE];
 	pcap_t* descr;
