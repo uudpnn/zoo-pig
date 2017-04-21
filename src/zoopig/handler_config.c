@@ -32,13 +32,10 @@ int init_get_config_parameters(){
         fprintf(stderr,"----------------------------------------------------\n");
         config_destroy(&cfg);
         return(EXIT_FAILURE);
-<<<<<<< HEAD
     
 		}
-=======
     }
 		printf("1111111111111111");
->>>>>>> 26d4ca937f92bce8fcd450b95b33bf83153f91b8
     setting= config_lookup(&cfg,"base_conf");
    
 		printf("1111111111111111");
@@ -50,11 +47,7 @@ int init_get_config_parameters(){
         (config_lookup_string(&setting, "interface", &INTERFACE_TMP));
         (config_lookup_string(&setting, "loc_Adapter", &loc_Adapter));
         //printf("pkg_type : %s\n\n", INTERFACE_TMP);
-<<<<<<< HEAD
         (config_lookup_string(&setting, "pkg_type", &PKG_TYPE_TMP));
-=======
-				printf("%s -------testtest\n");
->>>>>>> 26d4ca937f92bce8fcd450b95b33bf83153f91b8
         //config_destroy(&cfg);
         (config_lookup_string(&setting, "URL", &URL));
         return (EXIT_SUCCESS);
