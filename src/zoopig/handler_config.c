@@ -33,12 +33,9 @@ int init_get_config_parameters(){
         config_destroy(&cfg);
         return(EXIT_FAILURE);
     
-		}
     }
-		printf("1111111111111111");
     setting= config_lookup(&cfg,"base_conf");
    
-		printf("1111111111111111");
 	 	if (setting == NULL) {
         fprintf(stderr, "No 'base_conf' setting in configuration file scanReportProbe.conf.\n");
         //config_destroy(&cfg);
