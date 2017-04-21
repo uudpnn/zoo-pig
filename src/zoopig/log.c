@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "log.h"
- 
+#include <stdbool.h> 
 bool LogCreated = false;
  
 void Log (char *message)

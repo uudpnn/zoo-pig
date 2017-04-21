@@ -14,7 +14,7 @@
 #include <curl/curl.h>
 #include "handler_config.h"  //read /etc/my_app_name/config_name.conf
 #include "cJSON.h"
-
+#include "log.h"
 #define SNAP_LEN 1518       // 以太网帧最大长度
 #define SIZE_ETHERNET 14   // 以太网包头长度 mac 6*2, type: 2
 #define ETHER_ADDR_LEN  6  // mac地址长度
@@ -197,17 +197,20 @@ int curl_perform(){
         switch(res)
         {
             case CURLE_UNSUPPORTED_PROTOCOL:
-                fprintf(stderr,"不支持的协议,由URL的头部指定");
+		fprintf(stderr,"不支持的协议,由URL的头部指定");
+		LogErr("不支持的协议,由URL的头部指定");
             case CURLE_COULDNT_CONNECT:
                 fprintf(stderr,"不能连接到remote主机或者代理");
+                LogErr("不能连接到remote主机或者代理");
             case CURLE_HTTP_RETURNED_ERROR:
                 fprintf(stderr,"http返回错误");
+                LogErr("http返回错误");
             default:
                 fprintf(stderr,"返回值:%d",res);
         }
-        return -1;
+        return 1;
     }
-	return 0;
+	return 1;
 }
 
 
