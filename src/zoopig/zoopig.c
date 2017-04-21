@@ -9,8 +9,9 @@
 #include <netinet/if_ether.h>
 #include <netinet/if_ether.h>
 #include <net/if.h>
+
 #include <sys/ioctl.h>
-//#include <curl/curl.h>
+#include <curl/curl.h>
 #include "radiotap_iter.h"
 #include "handler_config.h"  //read /etc/my_app_name/config_name.conf
 #include "cJSON.h"
@@ -18,6 +19,14 @@
 #define SNAP_LEN 1518       // 以太网帧最大长度
 #define SIZE_ETHERNET 14   // 以太网包头长度 mac 6*2, type: 2
 #define ETHER_ADDR_LEN  6  // mac地址长度
+char SA[24];
+char DA[24];
+char *posturl;
+
+struct curl_slist *http_header = NULL;
+CURL *curl;
+CURLcode res;
+
 
 //以太网卡头信息 MAC 和type 共计14
 struct packet_ethernet {
@@ -27,6 +36,7 @@ struct packet_ethernet {
 };
 
 /* IP header */
+
 struct packet_ip {
     u_char  ip_vhl;                 /* version << 4 | header length >> 2 */
     u_char  ip_tos;                 /* type of service */
@@ -101,10 +111,9 @@ int cjson_struts_init(){
     }
     printf("%s\n", p);
     return 0;
-}
+
 */
 void loop_callback(u_char *args, const struct pcap_pkthdr *header, const u_char *packet) {
-    static int count = 0;                   // 包计数器
     const struct packet_ethernet *ethernet;  /* The ethernet header [1] */
     const struct packet_ip *ip;              /* The IP header */
     const struct packet_tcp *tcp;            /* The TCP header */
@@ -113,12 +122,11 @@ void loop_callback(u_char *args, const struct pcap_pkthdr *header, const u_char 
     int size_ip;
     int size_tcp;
     int size_payload;
- 
-    count++;
- 
+  
     /* 以太网头 */
     ethernet = (struct packet_ethernet*)(packet);
- 
+	sprintf(SA,"%02X%02X%02X%02X%02X%02X",ethernet->ether_shost[0],ethernet->ether_shost[1],ethernet->ether_shost[2],ethernet->ether_shost[3],ethernet->ether_shost[4],ethernet->ether_shost[5]);				
+	sprintf(DA,"%02X%02X%02X%02X%02X%02X",ethernet->ether_dhost[0],ethernet->ether_dhost[1],ethernet->ether_dhost[2],ethernet->ether_dhost[3],ethernet->ether_dhost[4],ethernet->ether_dhost[5]);	
     /* IP头 */
     ip = (struct packet_ip*)(packet + SIZE_ETHERNET);
     size_ip = IP_HL(ip)*4;
@@ -128,7 +136,7 @@ void loop_callback(u_char *args, const struct pcap_pkthdr *header, const u_char 
     }
  
     if ( ip->ip_p != IPPROTO_TCP ){ // TCP,UDP,ICMP,IP
-    return;
+		return;
     }
  
     /* TCP头 */
@@ -138,24 +146,75 @@ void loop_callback(u_char *args, const struct pcap_pkthdr *header, const u_char 
         //printf("无效的TCP头长度: %u bytes\n", size_tcp);
         return;
     }
- 
-    int sport =  ntohs(tcp->th_sport);
-    int dport =  ntohs(tcp->th_dport);
-    printf("%s:%d ", inet_ntoa(ip->ip_src), sport);
-    printf("%s:%d \n", inet_ntoa(ip->ip_dst), dport);
- 
+	char *postfile= (char *)malloc(80);
+
+	char sport[2];
+	char dport[2];
+	char *splitstr=",";
+    //int sport =  ntohs(tcp->th_sport);
+    //int dport =  ntohs(tcp->th_dport);
+	sprintf(sport,"%d",ntohs(tcp->th_sport));
+	sprintf(dport,"%d",ntohs(tcp->th_dport));
+	char *ip_src=inet_ntoa(ip->ip_src);
+	char *ip_dst=inet_ntoa(ip->ip_dst);
+    //printf("%s:%s %s", inet_ntoa(ip->ip_src), sport_itoa,SA);
+	//printf("%s:%s %s\n", inet_ntoa(ip->ip_dst), dport_itoa,DA);
+
+	char dest[30] = "Hello";
+    char src[] = "World";
+
+    postfile=strcat(strcat(strcat(strcat(strcat(postfile, ip_src),splitstr),sport),splitstr),SA);
+	strcat(strcat(strcat(strcat(strcat(strcat(postfile,splitstr),ip_dst),splitstr),dport),splitstr),DA);
+	//printf("%s \n",postfile);
+	curl_easy_setopt(curl,CURLOPT_POSTFIELDS,postfile); //post参数
+	curl_perform();
     //内容
-    payload = (u_char *)(packet + SIZE_ETHERNET + size_ip + size_tcp);
- 
-    //内容长度 
-    size_payload = ntohs(ip->ip_len) - (size_ip + size_tcp);
- 
-    if (size_payload > 0) {
-    	//printf("%d %d %d bytes\n", ntohs(tcp->th_seq), ntohs(tcp->th_ack) );
-    	write(payload, size_payload);
-    } else {
-   	  //printf("%d %d %d \n", ntohs(tcp->th_seq), ntohs(tcp->th_ack));
+	free(postfile);
+	
+}
+int curl_init_conf(){  
+    struct curl_slist *http_header = NULL;
+    curl = curl_easy_init();
+    if (!curl)
+    {
+        fprintf(stderr,"curl init failed");
+        return -1;
     }
+    curl_easy_setopt(curl,CURLOPT_URL,posturl); //url地址
+    //curl_easy_setopt(curl,CURLOPT_POSTFIELDS,datafile); //post参数
+    curl_easy_setopt(curl,CURLOPT_POST,1); //设置问非0表示本次操作为post
+    //curl_easy_setopt(curl,CURLOPT_VERBOSE,1); //打印调试信息
+    curl_easy_setopt(curl,CURLOPT_HEADER,0); //将响应头信息和相应体一起传给write_data
+    curl_easy_setopt(curl,CURLOPT_FOLLOWLOCATION,1); //设置为非0,响应头信息location
+	curl_easy_setopt(curl, CURLOPT_TIMEOUT, 1); // 1 hour
+
+
+
+	return 0;
+	
+}
+void cleanup_curl(){
+	curl_easy_cleanup(curl);
+}
+int curl_perform(){
+	res = curl_easy_perform(curl);
+
+    if (res != CURLE_OK)
+    {
+        switch(res)
+        {
+            case CURLE_UNSUPPORTED_PROTOCOL:
+                fprintf(stderr,"不支持的协议,由URL的头部指定");
+            case CURLE_COULDNT_CONNECT:
+                fprintf(stderr,"不能连接到remote主机或者代理");
+            case CURLE_HTTP_RETURNED_ERROR:
+                fprintf(stderr,"http返回错误");
+            default:
+                fprintf(stderr,"返回值:%d",res);
+        }
+        return -1;
+    }
+	return 0;
 }
 
 
@@ -163,25 +222,25 @@ void loop_callback(u_char *args, const struct pcap_pkthdr *header, const u_char 
 
 int main(int argc,char **argv)
 {
-  printf("laiba bliasdasdiisi--------");
 	init_get_config_parameters(); /*init config file read*/
 
 
 	printf("Start\n");
+	posturl = URL;
+	printf("%s-----",posturl);
 	char *dev;
 	char errbuf[PCAP_ERRBUF_SIZE];
 	pcap_t* descr;
-	char *filter_exp = PKG_TYPE_TMP;	/* The filter expression */
+	char *filter_exp= PKG_TYPE_TMP;		/**过滤表达式通过参数初始化函数获取 */
 	const u_char *packet;
 	struct pcap_pkthdr hdr;
 	struct ether_header *eptr;    /* net/ethernet.h */
 	struct bpf_program fp;        /* hold compiled program */
 	bpf_u_int32 maskp;            /* subnet mask */
 	bpf_u_int32 netp;             /* ip */
-
+	curl_init_conf();
 	/* Now get a device */
-	//dev = pcap_lookupdev(errbuf);
-	dev = INTERFACE_TMP;
+	dev = INTERFACE_TMP;	/**所监听的网络接口 同多参数初始化函数获取*/
 	printf("Interface: %s\n", dev); 
 
 	if(dev == NULL) {
@@ -212,6 +271,7 @@ int main(int argc,char **argv)
 	printf("config destroy");
 	/* loop for callback function */
 	pcap_loop(descr, -1, loop_callback, NULL);
+	cleanup_curl();
 	return 0;
 }
 
