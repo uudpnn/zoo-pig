@@ -207,6 +207,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include "handler_config.h"
+#include "cJSON.h"
 /* default snap length (maximum bytes per packet to capture) */
 #define SNAP_LEN 1518
 
@@ -365,7 +366,37 @@ print_hex_ascii_line(const u_char *payload, int len, int offset)
 
 return;
 }
+char *cjson_struts_init(char *chartmp[] ){
+  cJSON * pJsonRoot = NULL;
+  cJSON * fmt = NULL;
+  pJsonRoot = cJSON_CreateObject();
+  if(NULL == pJsonRoot)
+    {
+      //error happend here
+      return NULL;
+    }
 
+  //json struct for cjson
+  cJSON_AddItemToObject(pJsonRoot, "format", fmt=cJSON_CreateObject());
+  cJSON_AddStringToObject(fmt, "ip_src", chartmp[0]);
+  cJSON_AddStringToObject(fmt, "port_src", chartmp[1]);
+  cJSON_AddStringToObject(fmt, "mac_src", chartmp[2]);
+  cJSON_AddStringToObject(fmt, "ip_dst", chartmp[3]);
+  cJSON_AddStringToObject(fmt, "port_dst", chartmp[4]);
+  cJSON_AddStringToObject(fmt, "mac_dst", chartmp[5]);
+  char * p = cJSON_Print(fmt);
+
+  if(NULL == p)
+    {
+      //convert json list to string faild, exit
+      //because sub json pSubJson han been add to pJsonRoot, so just delete pJsonRoot, if you also delete pSubJson, it will coredump, and error is : double free
+      cJSON_Delete(pJsonRoot);
+      return "1";
+    }
+  return p;
+
+
+}
 /*
  * print packet payload data (avoid printing binary data)
  */
@@ -431,7 +462,8 @@ got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *packet)
 	int size_payload;
 	char src_mac[24];
 	char dst_mac[24];
-	
+	char char_ip_src[32];
+	char char_ip_dst[32];
 	printf("\nPacket number %d:\n", count);
 	count++;
 	
@@ -453,7 +485,9 @@ got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *packet)
 	printf("         mac: %s\n", dst_mac);
 	printf("       From: %s\n", inet_ntoa(ip->ip_src));
 	printf("         To: %s\n", inet_ntoa(ip->ip_dst));
-	
+	strcpy(char_ip_src,inet_ntoa(ip->ip_src));
+	strcpy(char_ip_dst,inet_ntoa(ip->ip_dst));
+	printf("%s __________________________%s",char_ip_src,char_ip_dst);
 	/* determine protocol */	
 	switch(ip->ip_p) {
 		case IPPROTO_TCP:
