@@ -366,36 +366,40 @@ print_hex_ascii_line(const u_char *payload, int len, int offset)
 
 return;
 }
-char *cjson_struts_init(char *chartmp[] ){
+int cjson_struts_init(char *chartmp[] ){
   cJSON * pJsonRoot = NULL;
-  cJSON * fmt = NULL;
+  //cJSON * fmt = NULL;
   pJsonRoot = cJSON_CreateObject();
   if(NULL == pJsonRoot)
     {
       //error happend here
       return NULL;
     }
-
+  
   //json struct for cjson
-  cJSON_AddItemToObject(pJsonRoot, "format", fmt=cJSON_CreateObject());
-  cJSON_AddStringToObject(fmt, "ip_src", chartmp[0]);
-  cJSON_AddStringToObject(fmt, "port_src", chartmp[1]);
-  cJSON_AddStringToObject(fmt, "mac_src", chartmp[2]);
-  cJSON_AddStringToObject(fmt, "ip_dst", chartmp[3]);
-  cJSON_AddStringToObject(fmt, "port_dst", chartmp[4]);
-  cJSON_AddStringToObject(fmt, "mac_dst", chartmp[5]);
-  char * p = cJSON_Print(fmt);
+  //cJSON_AddItemToObject(pJsonRoot, "format", fmt=cJSON_CreateObject());
+  cJSON_AddStringToObject(pJsonRoot, "ip_src", chartmp[0]);
+  cJSON_AddStringToObject(pJsonRoot, "port_src", chartmp[1]);
+  cJSON_AddStringToObject(pJsonRoot, "mac_src", chartmp[2]);
+  cJSON_AddStringToObject(pJsonRoot, "ip_dst", chartmp[3]);
+  cJSON_AddStringToObject(pJsonRoot, "port_dst", chartmp[4]);
+  cJSON_AddStringToObject(pJsonRoot, "mac_dst", chartmp[5]);
+  char * p = cJSON_Print(pJsonRoot);
 
   if(NULL == p)
     {
       //convert json list to string faild, exit
       //because sub json pSubJson han been add to pJsonRoot, so just delete pJsonRoot, if you also delete pSubJson, it will coredump, and error is : double free
       cJSON_Delete(pJsonRoot);
-      return "1";
+      return 1;
     }
-  return p;
+  printf("%s---------------\n",p);
+  cJSON_Delete(pJsonRoot);
+  free(p);
+  return 0;
+ 
 
-
+ 
 }
 /*
  * print packet payload data (avoid printing binary data)
@@ -449,7 +453,7 @@ void
 got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *packet)
 {
 
-	static int count = 1;                   /* packet counter */
+  //static int count = 1;                   /* packet counter */
 	
 	/* declare pointers to packet headers */
 	const struct sniff_ethernet *ethernet;  /* The ethernet header [1] */
@@ -464,8 +468,12 @@ got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *packet)
 	char dst_mac[24];
 	char char_ip_src[32];
 	char char_ip_dst[32];
-	printf("\nPacket number %d:\n", count);
-	count++;
+	char dport[2];
+	char sport[2];
+	char *json_argv[5];
+	
+	//printf("\nPacket number %d:\n", count);
+	//count++;
 	
 	/* define ethernet header */
 	ethernet = (struct sniff_ethernet*)(packet);
@@ -481,23 +489,23 @@ got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *packet)
 	sprintf(dst_mac, "%02X%02X%02X%02X%02X%02X",ethernet->ether_dhost[0],ethernet->ether_dhost[1],ethernet->ether_dhost[2],ethernet->ether_dhost[3],ethernet->ether_dhost[4],ethernet->ether_dhost[5]);
 
 	/* print source and destination IP addresses */
-	printf("         mac: %s\n", src_mac);
-	printf("         mac: %s\n", dst_mac);
-	printf("       From: %s\n", inet_ntoa(ip->ip_src));
-	printf("         To: %s\n", inet_ntoa(ip->ip_dst));
+	//printf("         mac: %s\n", src_mac);
+	//printf("         mac: %s\n", dst_mac);
+	//printf("       From: %s\n", inet_ntoa(ip->ip_src));
+	//printf("         To: %s\n", inet_ntoa(ip->ip_dst));
 	strcpy(char_ip_src,inet_ntoa(ip->ip_src));
 	strcpy(char_ip_dst,inet_ntoa(ip->ip_dst));
-	printf("%s __________________________%s",char_ip_src,char_ip_dst);
+	//printf("%s __________________________%s",char_ip_src,char_ip_dst);
 	/* determine protocol */	
 	switch(ip->ip_p) {
 		case IPPROTO_TCP:
 			printf("   Protocol: TCP\n");
 			break;
 		case IPPROTO_UDP:
-			printf("   Protocol: UDP\n");
+		  //printf("   Protocol: UDP\n");
 			return;
 		case IPPROTO_ICMP:
-			printf("   Protocol: ICMP\n");
+		  //	printf("   Protocol: ICMP\n");
 			return;
 		case IPPROTO_IP:
 			printf("   Protocol: IP\n");
@@ -519,15 +527,24 @@ got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *packet)
 		return;
 	}
 	
-	printf("   Src port: %d\n", ntohs(tcp->th_sport));
-	printf("   Dst port: %d\n", ntohs(tcp->th_dport));
+	sprintf(sport,"%d", ntohs(tcp->th_sport));
+	sprintf(dport,"%d", ntohs(tcp->th_dport));
 	
 	/* define/compute tcp payload (segment) offset */
 	payload = (u_char *)(packet + SIZE_ETHERNET + size_ip + size_tcp);
 	
 	/* compute tcp payload (segment) size */
 	size_payload = ntohs(ip->ip_len) - (size_ip + size_tcp);
-	
+	json_argv[0]=char_ip_src;
+	json_argv[1]=sport;
+	json_argv[2]=dst_mac;
+	json_argv[3]=char_ip_dst;
+	json_argv[4]=dport;
+	json_argv[5]=src_mac;
+	char *posttemp;
+	cjson_struts_init(json_argv);
+	//printf("-------------- callback \n %s \n",posttemp);
+	//free(posttemp);
 	/*
 	 * Print payload data; it might be binary, so don't just
 	 * treat it as a string.
