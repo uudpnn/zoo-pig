@@ -1,8 +1,8 @@
 # Set the libraries to link
 LFLAGS += -lpcap -pthread -lconfig -lcurl
-CFLAGS += -O2 -s -lm
+#CFLAGS += -O2 -s -lm
 # Debug
-#CFLAGS += -g
+CFLAGS += -g -lm
 
 # The target
 TARGET = zoopig

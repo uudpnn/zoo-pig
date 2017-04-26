@@ -206,6 +206,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+
 #include "handler_config.h"
 #include "cJSON.h"
 /* default snap length (maximum bytes per packet to capture) */
@@ -366,7 +367,7 @@ print_hex_ascii_line(const u_char *payload, int len, int offset)
 
 return;
 }
-int cjson_struts_init(char *chartmp[] ){
+int cjson_struts_init(char a[],char b[],char c[],char d[],char e[],char f[] ){
   cJSON * pJsonRoot = NULL;
   //cJSON * fmt = NULL;
   pJsonRoot = cJSON_CreateObject();
@@ -378,12 +379,12 @@ int cjson_struts_init(char *chartmp[] ){
   
   //json struct for cjson
   //cJSON_AddItemToObject(pJsonRoot, "format", fmt=cJSON_CreateObject());
-  cJSON_AddStringToObject(pJsonRoot, "ip_src", chartmp[0]);
-  cJSON_AddStringToObject(pJsonRoot, "port_src", chartmp[1]);
-  cJSON_AddStringToObject(pJsonRoot, "mac_src", chartmp[2]);
-  cJSON_AddStringToObject(pJsonRoot, "ip_dst", chartmp[3]);
-  cJSON_AddStringToObject(pJsonRoot, "port_dst", chartmp[4]);
-  cJSON_AddStringToObject(pJsonRoot, "mac_dst", chartmp[5]);
+  cJSON_AddStringToObject(pJsonRoot, "ip_src", a);
+  cJSON_AddStringToObject(pJsonRoot, "port_src", b);
+  cJSON_AddStringToObject(pJsonRoot, "mac_src", c);
+  cJSON_AddStringToObject(pJsonRoot, "ip_dst", d);
+  cJSON_AddStringToObject(pJsonRoot, "port_dst", e);
+  cJSON_AddStringToObject(pJsonRoot, "mac_dst", f);
   char * p = cJSON_Print(pJsonRoot);
 
   if(NULL == p)
@@ -468,9 +469,9 @@ got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *packet)
 	char dst_mac[24];
 	char char_ip_src[32];
 	char char_ip_dst[32];
-	char dport[2];
-	char sport[2];
-	char *json_argv[5];
+	char dport[6];
+	char sport[6];
+	char *json_argv[6];
 	
 	//printf("\nPacket number %d:\n", count);
 	//count++;
@@ -485,16 +486,13 @@ got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *packet)
 		printf("   * Invalid IP header length: %u bytes\n", size_ip);
 		return;
 	}
-	sprintf(src_mac, "%02X%02X%02X%02X%02X%02X",ethernet->ether_shost[0],ethernet->ether_shost[1],ethernet->ether_shost[2],ethernet->ether_shost[3],ethernet->ether_shost[4],ethernet->ether_shost[5]);				
-	sprintf(dst_mac, "%02X%02X%02X%02X%02X%02X",ethernet->ether_dhost[0],ethernet->ether_dhost[1],ethernet->ether_dhost[2],ethernet->ether_dhost[3],ethernet->ether_dhost[4],ethernet->ether_dhost[5]);
-
+	
 	/* print source and destination IP addresses */
 	//printf("         mac: %s\n", src_mac);
 	//printf("         mac: %s\n", dst_mac);
 	//printf("       From: %s\n", inet_ntoa(ip->ip_src));
 	//printf("         To: %s\n", inet_ntoa(ip->ip_dst));
-	strcpy(char_ip_src,inet_ntoa(ip->ip_src));
-	strcpy(char_ip_dst,inet_ntoa(ip->ip_dst));
+	
 	//printf("%s __________________________%s",char_ip_src,char_ip_dst);
 	/* determine protocol */	
 	switch(ip->ip_p) {
@@ -526,9 +524,20 @@ got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *packet)
 		printf("   * Invalid TCP header length: %u bytes\n", size_tcp);
 		return;
 	}
+	//strcpy(char_ip_src,inet_ntoa(ip->ip_src));
+	//strcpy(char_ip_dst,inet_ntoa(ip->ip_dst));
+	sprintf(src_mac, "%02X%02X%02X%02X%02X%02X",ethernet->ether_shost[0],ethernet->ether_shost[1],ethernet->ether_shost[2],ethernet->ether_shost[3],ethernet->ether_shost[4],ethernet->ether_shost[5]);				
+	sprintf(dst_mac, "%02X%02X%02X%02X%02X%02X",ethernet->ether_dhost[0],ethernet->ether_dhost[1],ethernet->ether_dhost[2],ethernet->ether_dhost[3],ethernet->ether_dhost[4],ethernet->ether_dhost[5]);
 	
-	sprintf(sport,"%d", ntohs(tcp->th_sport));
+
+	
+	
+
 	sprintf(dport,"%d", ntohs(tcp->th_dport));
+	sprintf(sport,"%d", ntohs(tcp->th_sport));
+	sprintf(char_ip_src,"%s",inet_ntoa(ip->ip_src));
+	sprintf(char_ip_dst,"%s",inet_ntoa(ip->ip_dst));
+	
 	
 	/* define/compute tcp payload (segment) offset */
 	payload = (u_char *)(packet + SIZE_ETHERNET + size_ip + size_tcp);
@@ -541,8 +550,8 @@ got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *packet)
 	json_argv[3]=char_ip_dst;
 	json_argv[4]=dport;
 	json_argv[5]=src_mac;
-	char *posttemp;
-	cjson_struts_init(json_argv);
+	//char *posttemp;
+	cjson_struts_init(char_ip_src,sport,dst_mac,char_ip_dst,dport,src_mac);
 	//printf("-------------- callback \n %s \n",posttemp);
 	//free(posttemp);
 	/*
