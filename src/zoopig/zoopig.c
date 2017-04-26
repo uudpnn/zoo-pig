@@ -206,9 +206,11 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-
+#include <curl/curl.h>
+#include "curl_handler.h"
 #include "handler_config.h"
 #include "cJSON.h"
+//char *posturl;
 /* default snap length (maximum bytes per packet to capture) */
 #define SNAP_LEN 1518
 
@@ -385,18 +387,22 @@ int cjson_struts_init(char a[],char b[],char c[],char d[],char e[],char f[] ){
   cJSON_AddStringToObject(pJsonRoot, "ip_dst", d);
   cJSON_AddStringToObject(pJsonRoot, "port_dst", e);
   cJSON_AddStringToObject(pJsonRoot, "mac_dst", f);
-  char * p = cJSON_Print(pJsonRoot);
+  data_fields = cJSON_Print(pJsonRoot);
 
-  if(NULL == p)
+  if(NULL == data_fields)
     {
       //convert json list to string faild, exit
       //because sub json pSubJson han been add to pJsonRoot, so just delete pJsonRoot, if you also delete pSubJson, it will coredump, and error is : double free
       cJSON_Delete(pJsonRoot);
       return 1;
     }
-  printf("%s---------------\n",p);
+  
+  //curl_send_data(p);
+  curl_send_post();  
+  
+  //printf("%s---------------\n",p);
   cJSON_Delete(pJsonRoot);
-  free(p);
+  free(data_fields);
   return 0;
  
 
@@ -497,7 +503,7 @@ got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *packet)
 	/* determine protocol */	
 	switch(ip->ip_p) {
 		case IPPROTO_TCP:
-			printf("   Protocol: TCP\n");
+		  //printf("   Protocol: TCP\n");
 			break;
 		case IPPROTO_UDP:
 		  //printf("   Protocol: UDP\n");
@@ -506,10 +512,10 @@ got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *packet)
 		  //	printf("   Protocol: ICMP\n");
 			return;
 		case IPPROTO_IP:
-			printf("   Protocol: IP\n");
+		  //printf("   Protocol: IP\n");
 			return;
 		default:
-			printf("   Protocol: unknown\n");
+		  //printf("   Protocol: unknown\n");
 			return;
 	}
 	
@@ -566,10 +572,47 @@ got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *packet)
 return;
 }
 
+int curl_send_data(char datafile[]){
+  CURL *curl;
+  //CURLcode res;
+  struct curl_slist *http_header = NULL;
+  curl = curl_easy_init();
+  if (!curl)
+    {
+      fprintf(stderr,"curl init failed");
+      curl_easy_cleanup(curl);
+      free(http_header);
+      return 0;
+    }
+  //增加HTTP header
+  char  test[]="http://172.16.1.195/service/test/json";
+  http_header = curl_slist_append(http_header, "Accept:application/json");
+  http_header = curl_slist_append(http_header, "Content-Type:application/json");
+  http_header = curl_slist_append(http_header, "charset:utf-8");
+  curl_easy_setopt(curl, CURLOPT_HTTPHEADER, http_header);
+  curl_easy_setopt(curl,CURLOPT_URL,test); //url地址
+  curl_easy_setopt(curl,CURLOPT_POSTFIELDS,datafile); //post参数
+  curl_easy_setopt(curl,CURLOPT_POST,1); //设置问非0表示本次操作为post
+  //curl_easy_setopt(curl,CURLOPT_VERBOSE,1); //打印调试信息
+  //curl_easy_setopt(curl,CURLOPT_HEADER,0); //将响应头信息和相应体一起传给write_data
+  //curl_easy_setopt(curl,CURLOPT_FOLLOWLOCATION,1); //设置为非0,响应头信息location
+  curl_easy_setopt(curl, CURLOPT_TIMEOUT, 1); //
+  curl_easy_perform(curl);
+  curl_easy_cleanup(curl);
+  //if (res != CURLE_OK){
+  //  return 0;
+  //}
+  //free(res);
+  free(http_header);
+  return 1;
+
+}
+
 int main(int argc, char **argv)
 {
         init_get_config_parameters(); /*init config file read*/
-  
+	server_url = URL;
+	printf("Server URL: %s \n",server_url);
         char *dev = INTERFACE_TMP;			/* capture device name */
 	char errbuf[PCAP_ERRBUF_SIZE];		/* error buffer */
 	pcap_t *handle;				/* packet capture handle */

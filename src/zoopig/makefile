@@ -7,7 +7,7 @@ CFLAGS += -g -lm
 # The target
 TARGET = zoopig
 # Object files
-OBJECTS = zoopig.o handler_config.o cjson.o
+OBJECTS = zoopig.o handler_config.o cjson.o curl_handler.o
 
 all: $(TARGET)
 
