@@ -4,7 +4,7 @@ include $(TOPDIR)/rules.mk
 # version number of the sources you're using
 # how many times you've released a package based on the above version number
 PKG_NAME:=zoopig
-PKG_VERSION:=1.0.2
+PKG_VERSION:=1.0.3
 PKG_RELEASE:=1
 PKG_LICENSE:=MIT
 
