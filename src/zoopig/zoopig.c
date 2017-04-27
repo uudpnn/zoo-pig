@@ -369,7 +369,7 @@ print_hex_ascii_line(const u_char *payload, int len, int offset)
 
 return;
 }
-int cjson_struts_init(char a[],char b[],char c[],char d[],char e[],char f[] ){
+int cjson_struts_init(char *chartmp[]){
   cJSON * pJsonRoot = NULL;
   //cJSON * fmt = NULL;
   pJsonRoot = cJSON_CreateObject();
@@ -381,12 +381,13 @@ int cjson_struts_init(char a[],char b[],char c[],char d[],char e[],char f[] ){
   
   //json struct for cjson
   //cJSON_AddItemToObject(pJsonRoot, "format", fmt=cJSON_CreateObject());
-  cJSON_AddStringToObject(pJsonRoot, "ip_src", a);
-  cJSON_AddStringToObject(pJsonRoot, "port_src", b);
-  cJSON_AddStringToObject(pJsonRoot, "mac_src", c);
-  cJSON_AddStringToObject(pJsonRoot, "ip_dst", d);
-  cJSON_AddStringToObject(pJsonRoot, "port_dst", e);
-  cJSON_AddStringToObject(pJsonRoot, "mac_dst", f);
+  cJSON_AddStringToObject(pJsonRoot, "ip_src", chartmp[0]);
+  cJSON_AddStringToObject(pJsonRoot, "port_src", chartmp[1]);
+  cJSON_AddStringToObject(pJsonRoot, "mac_src", chartmp[2]);
+  cJSON_AddStringToObject(pJsonRoot, "ip_dst", chartmp[3]);
+  cJSON_AddStringToObject(pJsonRoot, "port_dst", chartmp[4]);
+  cJSON_AddStringToObject(pJsonRoot, "mac_ap", chartmp[5]);
+  cJSON_AddStringToObject(pJsonRoot, "unitcode", chartmp[6]);
   data_fields = cJSON_Print(pJsonRoot);
 
   if(NULL == data_fields)
@@ -400,7 +401,7 @@ int cjson_struts_init(char a[],char b[],char c[],char d[],char e[],char f[] ){
   //curl_send_data(p);
   curl_send_post();  
   
-  //printf("%s---------------\n",p);
+  printf("%s---------------\n",data_fields);
   cJSON_Delete(pJsonRoot);
   free(data_fields);
   return 0;
@@ -532,8 +533,8 @@ got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *packet)
 	}
 	//strcpy(char_ip_src,inet_ntoa(ip->ip_src));
 	//strcpy(char_ip_dst,inet_ntoa(ip->ip_dst));
-	sprintf(src_mac, "%02X%02X%02X%02X%02X%02X",ethernet->ether_shost[0],ethernet->ether_shost[1],ethernet->ether_shost[2],ethernet->ether_shost[3],ethernet->ether_shost[4],ethernet->ether_shost[5]);				
-	sprintf(dst_mac, "%02X%02X%02X%02X%02X%02X",ethernet->ether_dhost[0],ethernet->ether_dhost[1],ethernet->ether_dhost[2],ethernet->ether_dhost[3],ethernet->ether_dhost[4],ethernet->ether_dhost[5]);
+	sprintf(src_mac, "%02X-%02X-%02X-%02X-%02X-%02X",ethernet->ether_shost[0],ethernet->ether_shost[1],ethernet->ether_shost[2],ethernet->ether_shost[3],ethernet->ether_shost[4],ethernet->ether_shost[5]);				
+	sprintf(dst_mac, "%02X-%02X-%02X-%02X-%02X-%02X",ethernet->ether_dhost[0],ethernet->ether_dhost[1],ethernet->ether_dhost[2],ethernet->ether_dhost[3],ethernet->ether_dhost[4],ethernet->ether_dhost[5]);
 	
 
 	
@@ -552,12 +553,15 @@ got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *packet)
 	size_payload = ntohs(ip->ip_len) - (size_ip + size_tcp);
 	json_argv[0]=char_ip_src;
 	json_argv[1]=sport;
-	json_argv[2]=dst_mac;
+	json_argv[2]=src_mac;
 	json_argv[3]=char_ip_dst;
 	json_argv[4]=dport;
-	json_argv[5]=src_mac;
+	json_argv[5]=dst_mac;
+	json_argv[6]=UNITCODE;
+	
+	
 	//char *posttemp;
-	cjson_struts_init(char_ip_src,sport,dst_mac,char_ip_dst,dport,src_mac);
+	cjson_struts_init(json_argv);
 	//printf("-------------- callback \n %s \n",posttemp);
 	//free(posttemp);
 	/*
@@ -572,41 +576,7 @@ got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *packet)
 return;
 }
 
-int curl_send_data(char datafile[]){
-  CURL *curl;
-  //CURLcode res;
-  struct curl_slist *http_header = NULL;
-  curl = curl_easy_init();
-  if (!curl)
-    {
-      fprintf(stderr,"curl init failed");
-      curl_easy_cleanup(curl);
-      free(http_header);
-      return 0;
-    }
-  //增加HTTP header
-  char  test[]="http://172.16.1.195/service/test/json";
-  http_header = curl_slist_append(http_header, "Accept:application/json");
-  http_header = curl_slist_append(http_header, "Content-Type:application/json");
-  http_header = curl_slist_append(http_header, "charset:utf-8");
-  curl_easy_setopt(curl, CURLOPT_HTTPHEADER, http_header);
-  curl_easy_setopt(curl,CURLOPT_URL,test); //url地址
-  curl_easy_setopt(curl,CURLOPT_POSTFIELDS,datafile); //post参数
-  curl_easy_setopt(curl,CURLOPT_POST,1); //设置问非0表示本次操作为post
-  //curl_easy_setopt(curl,CURLOPT_VERBOSE,1); //打印调试信息
-  //curl_easy_setopt(curl,CURLOPT_HEADER,0); //将响应头信息和相应体一起传给write_data
-  //curl_easy_setopt(curl,CURLOPT_FOLLOWLOCATION,1); //设置为非0,响应头信息location
-  curl_easy_setopt(curl, CURLOPT_TIMEOUT, 1); //
-  curl_easy_perform(curl);
-  curl_easy_cleanup(curl);
-  //if (res != CURLE_OK){
-  //  return 0;
-  //}
-  //free(res);
-  free(http_header);
-  return 1;
 
-}
 
 int main(int argc, char **argv)
 {
@@ -656,7 +626,8 @@ int main(int argc, char **argv)
 	printf("Device: %s\n", dev);
 	printf("Number of packets: %d\n", num_packets);
 	printf("Filter expression: %s\n", filter_exp);
-
+	
+	
 	/* open capture device */
 	handle = pcap_open_live(dev, SNAP_LEN, 1, 1000, errbuf);
 	if (handle == NULL) {
@@ -676,7 +647,13 @@ int main(int argc, char **argv)
 		    filter_exp, pcap_geterr(handle));
 		exit(EXIT_FAILURE);
 	}
-
+	/**set direction out or in */
+	if (pcap_setdirection(handle,PCAP_D_IN ) == -1) {
+	  fprintf(stderr, "Couldn't set direction  %s: %s\n",
+		  PCAP_D_OUT, pcap_geterr(handle));
+	  exit(EXIT_FAILURE);
+	}
+	
 	/* apply the compiled filter */
 	if (pcap_setfilter(handle, &fp) == -1) {
 		fprintf(stderr, "Couldn't install filter %s: %s\n",

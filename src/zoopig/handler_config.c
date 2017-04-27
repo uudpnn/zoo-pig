@@ -15,7 +15,7 @@ char *INTERFACE_TMP;
 char *PKG_TYPE_TMP;
 char *URL;		//URL of the server
 char *loc_Adapter; //local adapter name
-
+char *UNITCODE;
 config_t cfg;
 
 
@@ -47,7 +47,11 @@ int init_get_config_parameters(){
         (config_lookup_string(&setting, "pkg_type", &PKG_TYPE_TMP));
         //config_destroy(&cfg);
         (config_lookup_string(&setting, "URL", &URL));
+	(config_lookup_string(&setting, "UNITCODE", &UNITCODE));
+
+
         return (EXIT_SUCCESS);
+
     }
 
 

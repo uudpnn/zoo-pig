@@ -12,7 +12,7 @@ LOG_FILE_PATH="$DATA_FOLDER/$LOG_FILE"
 
 start(){
 	touch $LOG_FILE_PATH
-	
+	sleep 10
 	echo "start $PROCESS"
 	echo "[$(date)] start process">>$LOG_FILE_PATH
 	#lauch application
