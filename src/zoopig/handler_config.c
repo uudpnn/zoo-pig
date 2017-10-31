@@ -1,63 +1,59 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <libconfig.h>
-#include "handler_config.h"
+#include <string.h>
 
-//#define EXIT_SUCCESS 0
-//#define EXIT_FAILURE -1
-#define CONFIGFILE "/etc/zoopig/zoopig.conf"
+char* m_file_get_cmdval_str(char* c_cmd)
+        //      must free after getting
+{
+        //mcos("[%lu]:use m_file_get_cmdval_str\n",pthread_self());
+        FILE *f=NULL;
+        char linebuf[4096+1]="";
+        char* res=NULL;
 
-#define GET_STRING_CONFIG_INTERFACE 0
-#define GET_STRING_CONFIG_PKG_TYPE 1
-#define GET_STRING_CONFIG_CURL_CONFIG 2
-#define GET_STRING_CONFIG_LOC_ADAPTER 3
-char *INTERFACE_TMP;
-char *PKG_TYPE_TMP;
-char *URL;		//URL of the server
-char *loc_Adapter; //local adapter name
-char *UNITCODE;
-config_t cfg;
+        if (NULL!=c_cmd)
+        {
+          f=popen(c_cmd, "r");
+          if (NULL!=f)
+          {
+            //printf("open ok.\n");
+            if (fgets(linebuf, sizeof(linebuf)-1, f)!=NULL)
+            {
+              //printf("\n[%s]\n", linebuf);
+              m_file_getstr_from_linebuf(linebuf);
+              //printf("\n[%s]\n", linebuf);
 
-
-int init_get_config_parameters(){
-    config_t cfg;
-    config_setting_t *setting;
-    config_init(&cfg); //initializes the config_t structure pointed by config as a new,empty configuration
-    // Read and parse the file scanReportProbe.conf into the configuration object cfg. If there is an error, report it and exit.
-    //It returns an int : CONFIG_TRUE on success, or CONFIG_FALSE on failure; the config_error_text() and config_error_line() functions, can be used to obtain information about the error.
-    if(! config_read_file(&cfg, CONFIGFILE))
-    {
-        fprintf(stderr,"----------------------------------------------------\n");
-        fprintf(stderr, "read config file error :%s:%d - %s\n", config_error_file(&cfg),config_error_line(&cfg), config_error_text(&cfg));
-        fprintf(stderr,"----------------------------------------------------\n");
-        config_destroy(&cfg);
-        return(EXIT_FAILURE);
-    
-    }
-    setting= config_lookup(&cfg,"base_conf");
-   
-	 	if (setting == NULL) {
-        fprintf(stderr, "No 'base_conf' setting in configuration file scanReportProbe.conf.\n");
-        //config_destroy(&cfg);
-        return (EXIT_FAILURE);
-    } else {
-        (config_lookup_string(&setting, "interface", &INTERFACE_TMP));
-        (config_lookup_string(&setting, "loc_Adapter", &loc_Adapter));
-        //printf("pkg_type : %s\n\n", INTERFACE_TMP);
-        (config_lookup_string(&setting, "pkg_type", &PKG_TYPE_TMP));
-        //config_destroy(&cfg);
-        (config_lookup_string(&setting, "URL", &URL));
-	(config_lookup_string(&setting, "UNITCODE", &UNITCODE));
-
-
-        return (EXIT_SUCCESS);
-
-    }
-
-
-
+              if (0<strlen(linebuf))
+              {
+                //printf("[%s]\n", linebuf);
+                res=strdup(linebuf);
+              }
+            }
+            pclose(f);
+          }
+        }
+        return res;
 }
-int config_destroy_init(){
-    config_destroy(&cfg);
-    return EXIT_SUCCESS;
+void m_file_getstr_from_linebuf(char* v_linebuf)
+{
+        int idx=0;
+
+        if (NULL!=v_linebuf)
+        {
+          while (
+                (idx<strlen(v_linebuf))
+                &&(
+                        ('\t'==v_linebuf[idx])
+                        ||(0x1F<((unsigned char)v_linebuf[idx]))
+                )
+          )
+          {
+            //printf("[0x%02X]\n", (g_t_bit8u)linebuf[idx]);
+            idx++;
+          }
+          //printf("[%u, %u]\n", idx, strlen(linebuf));
+          if (idx<strlen(v_linebuf))
+          {
+            v_linebuf[idx]=0;
+          }
+        }
 }

@@ -1,5 +1,5 @@
 # Set the libraries to link
-LFLAGS += -lpcap -pthread -lconfig -lcurl
+LFLAGS += -lpcap -pthread -lcurl
 #CFLAGS += -O2 -s -lm
 # Debug
 CFLAGS += -g -lm
@@ -7,7 +7,7 @@ CFLAGS += -g -lm
 # The target
 TARGET = zoopig
 # Object files
-OBJECTS = zoopig.o handler_config.o cjson.o curl_handler.o
+OBJECTS = zoopig.o cjson.o handler_config.o curl_handler.o
 
 all: $(TARGET)
 

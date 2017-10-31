@@ -387,7 +387,6 @@ int cjson_struts_init(char *chartmp[]){
   cJSON_AddStringToObject(pJsonRoot, "ip_dst", chartmp[3]);
   cJSON_AddStringToObject(pJsonRoot, "port_dst", chartmp[4]);
   cJSON_AddStringToObject(pJsonRoot, "mac_ap", chartmp[5]);
-  cJSON_AddStringToObject(pJsonRoot, "unitcode", chartmp[6]);
   data_fields = cJSON_Print(pJsonRoot);
 
   if(NULL == data_fields)
@@ -557,7 +556,7 @@ got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *packet)
 	json_argv[3]=char_ip_dst;
 	json_argv[4]=dport;
 	json_argv[5]=dst_mac;
-	json_argv[6]=UNITCODE;
+
 	
 	
 	//char *posttemp;
@@ -580,14 +579,14 @@ return;
 
 int main(int argc, char **argv)
 {
-        init_get_config_parameters(); /*init config file read*/
-	server_url = URL;
+        //init_get_config_parameters(); /*init config file read*/
+	//char *en_probe2=m_file_get_cmdval_str("uci get fniiprobe.probe2.enable 2>/dev/null");
+	server_url = m_file_get_cmdval_str("uci get zoopig.audit.url");
 	printf("Server URL: %s \n",server_url);
-        char *dev = INTERFACE_TMP;			/* capture device name */
+        char *dev = m_file_get_cmdval_str("uci get zoopig.audit.interface");			/* capture device name */
 	char errbuf[PCAP_ERRBUF_SIZE];		/* error buffer */
 	pcap_t *handle;				/* packet capture handle */
-
-	char *filter_exp = PKG_TYPE_TMP;		/* filter expression [3] */
+	char *filter_exp = m_file_get_cmdval_str("uci get zoopig.audit.pkg_type");		/* filter expression [3] */
 	struct bpf_program fp;			/* compiled filter program (expression) */
 	bpf_u_int32 mask;			/* subnet mask */
 	bpf_u_int32 net;			/* ip */

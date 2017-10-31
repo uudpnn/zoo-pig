@@ -4,7 +4,7 @@ include $(TOPDIR)/rules.mk
 # version number of the sources you're using
 # how many times you've released a package based on the above version number
 PKG_NAME:=zoopig
-PKG_VERSION:=1.0.3
+PKG_VERSION:=b
 PKG_RELEASE:=1
 PKG_LICENSE:=MIT
 
@@ -22,12 +22,12 @@ TARGET_LDFLAGS+= \
 # and are not shown here.
 define Package/zoopig
     SECTION:=utils
-    CATEGORY:=Utilities
+    CATEGORY:=Extra packages
     TITLE:=zoopig
     URL:=https://github.com/luigiDB/scan-report_probe
     TITLE:=Scan in monitor mode probe over wifi channel with periodic report to a server through http post.
     MAINTAINER:=Please refer to github repository page
-    DEPENDS:= +libpthread +libpcap +libconfig +libcurl
+    DEPENDS:= +libpthread +libpcap +libcurl
 endef
 
 define Package/zoopig/description
@@ -65,7 +65,7 @@ define Package/zoopig/install
 	$(INSTALL_DIR) $(1)/etc/zoopig/
 	
 	# copy the config
-	$(INSTALL_CONF) $(PKG_BUILD_DIR)/zoopig.conf $(1)/etc/zoopig
+	#$(INSTALL_CONF) $(PKG_BUILD_DIR)/zoopig.conf $(1)/etc/zoopig
 	
 	# make a directory for some random data files required by zoopig
 	$(INSTALL_DIR) $(1)/usr/share/zoopig
